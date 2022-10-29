@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type Conn struct {
+type conn struct {
 	addr string
 }
 
@@ -21,24 +21,24 @@ func TestNewPool(t *testing.T) {
 	p := NewPool(addrs, dialFn(t, nil), closeFn(t, func() {
 		wg.Done()
 	}))
-	conn, err := p.Get()
+	con, err := p.Get()
 	if err != nil {
 		log.Printf("get error: %v", err)
 	}
-	p.Put(conn)
+	p.Put(con)
 
-	conn, err = p.Get(addrs[0])
+	con, err = p.Get(addrs[0])
 	if err != nil {
 		t.Fatalf("get error: %v", err)
 	}
 
-	if c, ok := conn.(*Conn); ok {
+	if c, ok := con.(*conn); ok {
 		if c.addr != addrs[0] {
 			t.Fatalf("get addr connection error, want: %s, got: %s", addrs[0], c.addr)
 		}
 	}
 
-	p.Discard(conn)
+	p.Discard(con)
 	p.Close()
 	wg.Wait()
 }
@@ -214,7 +214,7 @@ func TestDialBackoffPolicy(t *testing.T) {
 							i++
 						}
 						if i >= len(tt.interval) {
-							return &Conn{addr: addr}, nil
+							return &conn{addr: addr}, nil
 						}
 					}
 					return nil, errors.New("dail error")
@@ -279,7 +279,7 @@ func TestEliminateAddr(t *testing.T) {
 			p := NewPool([]string{"tcp://localhost:8080"},
 				func(addr string) (interface{}, error) {
 					if atomic.AddInt64(&cnt, 1) > int64(tt.succeedAfter) {
-						return &Conn{addr: addr}, nil
+						return &conn{addr: addr}, nil
 					}
 					return nil, errors.New("dail error")
 				},
@@ -306,13 +306,13 @@ func dialFn(t *testing.T, fn func()) Dial {
 			fn()
 		}
 		t.Logf("dial: %s\n", addr)
-		return &Conn{addr: addr}, nil
+		return &conn{addr: addr}, nil
 	}
 }
 
 func closeFn(t *testing.T, fn func()) Close {
-	return func(conn interface{}) {
-		if c, ok := conn.(*Conn); ok {
+	return func(con interface{}) {
+		if c, ok := con.(*conn); ok {
 			t.Logf("close: %s\n", c.addr)
 		}
 		if fn != nil {
